@@ -128,7 +128,7 @@ class sistema_arquivos:
         self.alterar_diretorio_atual(diretorio_destino)
         return True
 
-    def listar_diretorio(self, caminho: list = None) -> bool:  # PRONTA
+    def listar_diretorio(self, usuario_atual : str, caminho: list = None) -> bool:  # PRONTA
         if caminho is None:
             caminho = ['.']
         diretorio_a_listar = self.encontrar_inode(caminho)
@@ -136,6 +136,16 @@ class sistema_arquivos:
             print("bash: ls: " + '/'.join(caminho) +
                   ": Arquivo ou diretório inexistente")
             return False
+        if usuario_atual != diretorio_a_listar.dono:
+            if 'r' not in diretorio_a_listar.permissao_outros:
+                print("bash: ls: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
+        if usuario_atual == diretorio_a_listar.dono:
+            if 'r' not in diretorio_a_listar.permissao_dono:
+                print("bash: ls: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
         filhos = diretorio_a_listar.listar()
         filho: inode
         for filho in filhos:
@@ -147,7 +157,7 @@ class sistema_arquivos:
                 print(filho.nome)
         return True
 
-    def renomear_arquivo_ou_diretorio(self, caminho: list, novo_caminho: str): # ACREDITO QUE ESTEJA PRONTA, MAS NÃO TESTEI MUITO
+    def renomear_arquivo_ou_diretorio(self, caminho: list, novo_caminho: str, usuario_atual : str): # ACREDITO QUE ESTEJA PRONTA, MAS NÃO TESTEI MUITO
         inode_a_renomear = self.encontrar_inode(caminho)
         if inode_a_renomear is False:
             print("bash: mv: " + '/'.join(caminho) +
@@ -162,6 +172,16 @@ class sistema_arquivos:
             print("bash: mv: " + '/'.join(caminho) +
                   ": Arquivo ou diretório inexistente")
             return False
+        if inode_a_renomear.dono != usuario_atual:
+            if 'w' not in inode_a_renomear.permissao_outros:
+                print("bash: mv: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
+        if inode_a_renomear.dono == usuario_atual:
+            if 'w' not in inode_a_renomear.permissao_dono:
+                print("bash: mv: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
         filho_novo_nome = self.procurar_inode(pai_novo_nome, novo_caminho[-1])
         if filho_novo_nome is not None and filho_novo_nome is not False:
             # Filho com mesmo nome já existe
@@ -181,7 +201,7 @@ class sistema_arquivos:
         inode_a_renomear.mover(pai_novo_nome, novo_caminho[-1])
         return True
 
-    def remover_arquivo(self, caminho: list): ## PRONTO?? DA UMA OLHADA JAEGER
+    def remover_arquivo(self, caminho: list, usuario_atual : str): ## PRONTO?? DA UMA OLHADA JAEGER
         inode_a_remover = self.encontrar_inode(caminho)
         if inode_a_remover is False:
             print("bash: rm: " + '/'.join(caminho) +
@@ -195,10 +215,19 @@ class sistema_arquivos:
             print("bash: rm: " + '/'.join(caminho) +
                   ": Não é um arquivo")
             return False
-        else:
-            inode_a_remover.apontador_inode_pai.remover_inode(inode_a_remover)
-            self.disco.remover_inode(inode_a_remover)
-            return True
+        if inode_a_remover.dono != usuario_atual:
+            if 'w' not in inode_a_remover.permissao_outros:
+                print("bash: rm: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
+        if inode_a_remover.dono == usuario_atual:
+            if 'w' not in inode_a_remover.permissao_dono:
+                print("bash: rm: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
+        inode_a_remover.apontador_inode_pai.remover_inode(inode_a_remover)
+        self.disco.remover_inode(inode_a_remover)
+        return True
 
 
     def escrever_arquivo(self, caminho: list, conteudo: str, usuario: str):
@@ -251,6 +280,11 @@ class sistema_arquivos:
         return True
 
     def alterar_usuario(self, caminho: list, usuario: str, usuario_atual: str):
+        usuario = self.so.buscar_usuario(usuario)
+        if usuario is None:
+            print("bash: chown"  +
+                  ": Usuário inexistente")
+            return False
         inode_a_alterar = self.encontrar_inode(caminho)
         if inode_a_alterar is False:
             print("bash: chown: " + '/'.join(caminho) +
@@ -448,7 +482,7 @@ class sistema_arquivos:
                         ": Usuário inválido")
                 return False
 
-    def listar_permissoes_arquivo(self, caminho: list):
+    def listar_permissoes_arquivo(self, caminho: list, usuario_atual: str):
         inode_a_listar = self.encontrar_inode(caminho)
         if inode_a_listar is False:
             print("bash: ls: " + '/'.join(caminho) +
@@ -458,8 +492,19 @@ class sistema_arquivos:
             print('-'+inode_a_listar.permissao_dono, inode_a_listar.permissao_outros, inode_a_listar.dono, '/'.join(caminho)) 
             return True
         elif inode_a_listar.tipo == 'd':
+            if inode_a_listar.dono != usuario_atual:
+                if 'r' not in inode_a_listar.permissao_outros:
+                    print("bash: ls: " + '/'.join(caminho) +
+                        ": Permissão negada")
+                    return False
+            if inode_a_listar.dono == usuario_atual:
+                if 'r' not in inode_a_listar.permissao_dono:
+                    print("bash: ls: " + '/'.join(caminho) +
+                        ": Permissão negada")
+                    return False
             ## mostrar permissões dos arquivos dentro do diretório
             filhos = inode_a_listar.listar()
+            print('d'+inode_a_listar.permissao_dono, inode_a_listar.permissao_outros, inode_a_listar.dono, '/'.join(caminho))
             for i in filhos:
                 if i.apontador_inode_pai is not inode_a_listar:
                     continue
@@ -469,7 +514,7 @@ class sistema_arquivos:
                     print('d'+i.permissao_dono, i.permissao_outros, i.dono, '/'.join(caminho)+'/'+i.nome)
             return True
 
-    def copiar_arquivo(self, caminho: list, novo_caminho: list): ## está duplicando o conteúdo do arquivo... pq?
+    def copiar_arquivo(self, caminho: list, novo_caminho: list, usuario_atual : str): ## está duplicando o conteúdo do arquivo... pq?
         inode_a_copiar = self.encontrar_inode(caminho)
         if inode_a_copiar is False:
             print("bash: cp: " + '/'.join(caminho) +
@@ -479,6 +524,16 @@ class sistema_arquivos:
             print("bash: cp: " + '/'.join(caminho) +
                   ": Não é um arquivo")
             return False
+        if inode_a_copiar.dono != usuario_atual:
+            if 'w' not in inode_a_copiar.permissao_outros:
+                print("bash: cp: " + '/'.join(caminho) +
+                    ": Permissão negada")
+                return False
+        if inode_a_copiar.dono == usuario_atual:
+            if 'w' not in inode_a_copiar.permissao_dono:
+                print("bash: cp: " + '/'.join(caminho) +
+                    ": Permissão negada")
+                return False
         inode_copia = self.criar_inode(novo_caminho, self.so.usuario_atual, 'a')
         inode_copia.escrever(inode_a_copiar.ler())
         return True

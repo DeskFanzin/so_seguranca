@@ -2,6 +2,7 @@ from .disco import disco
 from .sistema_arquivos import sistema_arquivos
 from .usuario import usuario
 import os
+import hashlib
 
 
 class sistema_operacional:
@@ -22,13 +23,23 @@ class sistema_operacional:
         self.usuarios.append(usuario(nome, senha))
         return True
 
+    def senha_para_hash(self, senha: str) -> str:
+        return hashlib.sha256(senha.encode()).hexdigest()
+
     def logar(self, nome: str, senha: str):
         for _usuario in self.usuarios:
             if _usuario.nome == nome and _usuario.senha == senha:
                 self.usuario_atual = _usuario
+                print(senha)
                 return True
         print("Usuário ou senha incorretos. Tente novamente.")
         return False
+
+    def buscar_usuario(self, nome: str) -> usuario:
+        for _usuario in self.usuarios:
+            if _usuario.nome == nome:
+                return _usuario
+        return None
 
     def deslogar(self):
         self.usuario_atual = None

@@ -34,6 +34,7 @@ def criar_usuario():
     usuario = input()
     print("senha: ", end="")
     senha = input()
+    senha = so.senha_para_hash(senha)
     so.criar_usuario(usuario, senha)
     
 def logar():
@@ -42,6 +43,7 @@ def logar():
     usuario = input()
     print("senha: ", end="")
     senha = input()
+    senha = so.senha_para_hash(senha)
     o =so.logar(usuario, senha)
     if o == True:
         print("logado")
@@ -110,6 +112,7 @@ def main():
                         print("Tente 'chown --help' para mais informações.")
                     else:
                         caminho_lista = so.converter_caminho_para_lista(comando[1])
+                        ## achando o usuario que vai ser alterado
                         usuario_permitido = comando[2]
                         so.arquivos.alterar_usuario(caminho_lista, usuario_permitido, so.usuario_atual)
                 except Exception as e:
@@ -127,7 +130,7 @@ def main():
                             so.arquivos.criar_inode(caminho_lista, so.usuario_atual, "a")
                 except Exception as e:
                     print(e)
-                    print("erro ao criar diretório")
+                    print("erro ao criar arquivo")
                     print("uso: touch <nome>")
             case "rm":
                 try:
@@ -137,7 +140,7 @@ def main():
                     else:
                         for diretorio in comando[1:]:
                             caminho_lista = so.converter_caminho_para_lista(diretorio)
-                            so.arquivos.remover_arquivo(caminho_lista)
+                            so.arquivos.remover_arquivo(caminho_lista, so.usuario_atual)
 
                 except Exception as e:
                     print(e)
@@ -191,7 +194,7 @@ def main():
                     else:
                         caminho_antigo = so.converter_caminho_para_lista(comando[1])
                         caminho_copiado = so.converter_caminho_para_lista(comando[2])
-                        so.arquivos.copiar_arquivo(caminho_antigo, caminho_copiado)
+                        so.arquivos.copiar_arquivo(caminho_antigo, caminho_copiado, so.usuario_atual)
                 except Exception as e:
                     print(e)
                     print("erro ao copiar arquivo")
@@ -231,20 +234,20 @@ def main():
             case "ls": # PRONTO
                 try:
                     if len(comando) == 1:
-                        so.arquivos.listar_diretorio()
+                        so.arquivos.listar_diretorio(so.usuario_atual)
                         for diretorio in comando[1:]:
                             caminho_lista = so.converter_caminho_para_lista(diretorio)
-                            so.arquivos.listar_diretorio(caminho_lista)
+                            so.arquivos.listar_diretorio(so.usuario_atual, caminho)
                     if len(comando) > 1:
                         if comando[1] == "-l":
                                 if comando[2].startswith("/"):
                                     caminho_lista = so.converter_caminho_para_lista(comando[2])
-                                    so.arquivos.listar_permissoes_arquivo(caminho_lista)
+                                    so.arquivos.listar_permissoes_arquivo(caminho_lista, so.usuario_atual)
                                 if comando[2] == '':
                                     raise Exception
                                 if comando[2].startswith("/") == False:
                                     caminho = so.converter_caminho_para_lista(comando[2])
-                                    so.arquivos.listar_permissoes_arquivo(caminho)
+                                    so.arquivos.listar_permissoes_arquivo(caminho, so.usuario_atual)
 
 
                 except Exception as e:
@@ -259,7 +262,7 @@ def main():
                     else:
                         for diretorio in comando[1:]:
                             caminho_lista = so.converter_caminho_para_lista(diretorio)
-                            so.arquivos.remover_diretorio(caminho_lista)
+                            so.arquivos.remover_diretorio(caminho_lista, so.usuario_atual)
                 except Exception as e:
                     print(e)
                     print("erro ao remover diretório")
