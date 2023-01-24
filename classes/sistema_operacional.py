@@ -29,6 +29,9 @@ class sistema_operacional:
                 return True
         return False
 
+    def deslogar(self):
+        self.usuario_atual = None
+
     def converter_caminho_para_lista(self, caminho: str) -> list:
         if caminho == '':
             return ['']

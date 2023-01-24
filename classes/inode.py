@@ -18,6 +18,8 @@ class inode:
         self.apontador_inode_pai = apontador_inode_pai
         self.qtd_inodes = 0
         self.ref_disco = ref_disco
+        self.permissao_dono = 'rw'
+        self.permissao_outros = 'r'
         self.ref_disco.adicionar_inode(self)
         self.limite_de_blocos = ((self.ref_disco.tamanho_inodes * 1024) - 300) // (len(str(self.ref_disco.quantidade_blocos)))
         self._tipo = self.get_tipo()
@@ -134,7 +136,7 @@ class inode:
             return conteudo
         else:
             raise Exception(f'{self} não é um arquivo.')
-        
+
     def limpar(self):
         if self.tipo == 'a':
             self.apontador_blocos = []

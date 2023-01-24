@@ -31,10 +31,36 @@ def main():
     so = sistema_operacional()
     so.criar_usuario("admin", "admin")
     so.logar("admin", "admin")
-    while (comando := input(f"{Fore.GREEN}{so.usuario_atual}{Style.RESET_ALL}:{Fore.BLUE}~{so.arquivos.diretorio_atual}{Style.RESET_ALL}$ ")) != "sair":
+    while (comando := input(f"{Fore.GREEN}{so.usuario_atual}{Style.RESET_ALL}:{Fore.BLUE}~{so.arquivos.diretorio_atual}{Style.RESET_ALL}$ ")) != "sair" and so.usuario_atual is not None:
         comando = comando.split(" ")
         comando = list(filter(None, comando))
         match comando[0]:
+            case "sair_usuario":
+                so.deslogar()
+                so.criar_usuario("admin2", "admin2")
+                so.logar("admin2", "admin2")
+            case "chmod":
+                try:
+                    if len(comando) == 1:
+                        print("chmod: falta operando")
+                        print("Tente 'chmod --help' para mais informações.")
+                    else:
+                        caminho_lista = so.converter_caminho_para_lista(comando[1])
+                        permissao = comando[2]
+                        so.arquivos.alterar_permissao(caminho_lista, permissao)
+                except Exception as e:
+                    print(e)
+            case "chown":
+                try:
+                    if len(comando) == 1:
+                        print("chown: falta operando")
+                        print("Tente 'chown --help' para mais informações.")
+                    else:
+                        caminho_lista = so.converter_caminho_para_lista(comando[1])
+                        usuario = comando[2]
+                        so.arquivos.alterar_usuario(caminho_lista, usuario, so.usuario_atual)
+                except Exception as e:
+                    print(e)
             case "salvar":
                 so.disco.para_texto()
             case "touch":
@@ -82,7 +108,7 @@ def main():
                                 conteudo = texto.rstrip()
                                 conteudo = conteudo.strip('"')
                                 caminho_lista = so.converter_caminho_para_lista(caminho)
-                                so.arquivos.escrever_arquivo(caminho_lista, conteudo)
+                                so.arquivos.escrever_arquivo(caminho_lista, conteudo, so.usuario_atual)
                     else:
                         print(' '.join(comando[1:]))
                 # except Exception as e:

@@ -201,7 +201,7 @@ class sistema_arquivos:
             return True
 
 
-    def escrever_arquivo(self, caminho: list, conteudo: str):
+    def escrever_arquivo(self, caminho: list, conteudo: str, usuario: str):
         inode_a_escrever = self.encontrar_inode(caminho)
         if inode_a_escrever is False:
             print("bash: echo: " + '/'.join(caminho) +
@@ -210,7 +210,13 @@ class sistema_arquivos:
         if inode_a_escrever.tipo != 'a':
             print("bash: echo: " + '/'.join(caminho) +
                   ": Não é um arquivo")
-            return False
+            return False        
+        ## tentando algo com usuarios
+        if usuario != inode_a_escrever.dono:
+            if 'w' not in inode_a_escrever.permissao_grupo:
+                print("bash: echo: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
         return inode_a_escrever.escrever(conteudo)
     
     def ler_arquivo(self, caminho: list):
@@ -227,6 +233,49 @@ class sistema_arquivos:
         if conteudo_arquivo is False or conteudo_arquivo is None:
             return False
         print(conteudo_arquivo)
+        return True
+
+    def alterar_usuario(self, caminho: list, usuario: str, usuario_atual: str):
+        inode_a_alterar = self.encontrar_inode(caminho)
+        if inode_a_alterar is False:
+            print("bash: chown: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if inode_a_alterar.apontador_inode_pai is None:
+            print("bash: chown: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if usuario_atual != inode_a_alterar.dono:
+            print("bash: chown: " + '/'.join(caminho) +
+                    ": Permissão negada")
+            return False
+        inode_a_alterar.dono = usuario
+        return True
+
+    def alterar_permissao(self, caminho: list, permissao: str):
+        inode_a_alterar = self.encontrar_inode(caminho)
+        if inode_a_alterar is False:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if inode_a_alterar.apontador_inode_pai is None:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if len(permissao) > 2:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Permissão inválida")
+            return False
+        for i in permissao:
+            if i not in ['r', 'w']:
+                if i == '-':
+                    continue
+                print("bash: chmod: " + '/'.join(caminho) +
+                      ": Permissão inválida")
+                return False
+        print(inode_a_alterar.permissao_dono)
+        inode_a_alterar.permissao_dono = permissao
+        print(inode_a_alterar.permissao_dono)
         return True
 
     def copiar_arquivo(self, caminho: list, novo_caminho: list): ## está duplicando o conteúdo do arquivo... pq?
