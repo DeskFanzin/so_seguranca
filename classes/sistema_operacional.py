@@ -27,6 +27,7 @@ class sistema_operacional:
             if _usuario.nome == nome and _usuario.senha == senha:
                 self.usuario_atual = _usuario
                 return True
+        print("Usuário ou senha incorretos. Tente novamente.")
         return False
 
     def deslogar(self):

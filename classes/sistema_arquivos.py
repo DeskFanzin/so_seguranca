@@ -213,13 +213,18 @@ class sistema_arquivos:
             return False        
         ## tentando algo com usuarios
         if usuario != inode_a_escrever.dono:
-            if 'w' not in inode_a_escrever.permissao_grupo:
+            if 'w' not in inode_a_escrever.permissao_outros:
+                print("bash: echo: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
+        if usuario == inode_a_escrever.dono:
+            if 'w' not in inode_a_escrever.permissao_dono:
                 print("bash: echo: " + '/'.join(caminho) +
                       ": Permissão negada")
                 return False
         return inode_a_escrever.escrever(conteudo)
     
-    def ler_arquivo(self, caminho: list):
+    def ler_arquivo(self, caminho: list, usuario: str):
         inode_a_ler = self.encontrar_inode(caminho)
         if inode_a_ler is False:
             print("bash: cat: " + '/'.join(caminho) +
@@ -229,6 +234,16 @@ class sistema_arquivos:
             print("bash: cat: " + '/'.join(caminho) +
                   ": Não é um arquivo")
             return False
+        if usuario != inode_a_ler.dono:
+            if 'r' not in inode_a_ler.permissao_outros:
+                print("bash: cat: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
+        if usuario == inode_a_ler.dono:
+            if 'r' not in inode_a_ler.permissao_dono:
+                print("bash: cat: " + '/'.join(caminho) +
+                      ": Permissão negada")
+                return False
         conteudo_arquivo = inode_a_ler.ler()
         if conteudo_arquivo is False or conteudo_arquivo is None:
             return False
@@ -252,7 +267,7 @@ class sistema_arquivos:
         inode_a_alterar.dono = usuario
         return True
 
-    def alterar_permissao(self, caminho: list, permissao: str):
+    def alterar_permissao(self, caminho: list, permissao: str, usuario_a_alterar: str, usuario_atual: str):        
         inode_a_alterar = self.encontrar_inode(caminho)
         if inode_a_alterar is False:
             print("bash: chmod: " + '/'.join(caminho) +
@@ -266,17 +281,193 @@ class sistema_arquivos:
             print("bash: chmod: " + '/'.join(caminho) +
                   ": Permissão inválida")
             return False
+        if usuario_atual != inode_a_alterar.dono:
+            print("bash: chmod: " + '/'.join(caminho) +
+                    ": Permissão negada")
+            return False
         for i in permissao:
             if i not in ['r', 'w']:
-                if i == '-':
-                    continue
                 print("bash: chmod: " + '/'.join(caminho) +
                       ": Permissão inválida")
                 return False
-        print(inode_a_alterar.permissao_dono)
-        inode_a_alterar.permissao_dono = permissao
-        print(inode_a_alterar.permissao_dono)
+        if len(permissao) < 2:
+            permissao = permissao + '-'        
+        match usuario_a_alterar:
+            case 'u':
+                inode_a_alterar.permissao_dono = permissao
+            case 'o':
+                inode_a_alterar.permissao_outros = permissao
+            case 'a':
+                inode_a_alterar.permissao_dono = permissao
+                inode_a_alterar.permissao_outros = permissao
+            case _:
+                print("bash: chmod: " + '/'.join(caminho) +
+                        ": Usuário inválido")
+                return False
         return True
+        
+    def adicionar_permissao(self, caminho: list, permissao: str, usuario_a_alterar: str, usuario_atual: str):
+        inode_a_alterar = self.encontrar_inode(caminho)
+        if inode_a_alterar is False:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if inode_a_alterar.apontador_inode_pai is None:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if len(permissao) > 2:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Permissão inválida")
+            return False
+        if usuario_atual != inode_a_alterar.dono:
+            print("bash: chmod: " + '/'.join(caminho) +
+                    ": Permissão negada")
+            return False
+        for i in permissao:
+            if i not in ['r', 'w']:
+                print("bash: chmod: " + '/'.join(caminho) +
+                      ": Permissão inválida")
+                return False
+        match usuario_a_alterar:
+            case 'u':
+                for i in permissao:
+                    if i in inode_a_alterar.permissao_dono:
+                        print("bash: chmod: " + '/'.join(caminho) +
+                            ": Permissão já concedida")
+                        return False
+                inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace('-', '')
+                inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono + permissao
+                if len(inode_a_alterar.permissao_dono) < 2:
+                    inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono + '-'
+                return True
+            case 'o':
+                for i in permissao:
+                    if i in inode_a_alterar.permissao_outros:
+                        print("bash: chmod: " + '/'.join(caminho) +
+                            ": Permissão já concedida")
+                        return False
+                inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace('-', '')
+                inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros + permissao
+                if len(inode_a_alterar.permissao_outros) < 2:
+                    inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros + '-'
+                return True
+            case 'a':
+                for i in permissao:
+                    if i in inode_a_alterar.permissao_dono and i in inode_a_alterar.permissao_outros:
+                        print("bash: chmod: " + '/'.join(caminho) +
+                            ": Permissão já concedida")
+                        return False
+                    if i in inode_a_alterar.permissao_dono:
+                        inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros + i
+                        return True
+                    if i in inode_a_alterar.permissao_outros:
+                        inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono + i
+                        return True
+                inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace('-', '')
+                inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace('-', '')
+                inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono + permissao
+                inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros + permissao
+                if len(inode_a_alterar.permissao_dono) < 2:
+                    inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono + '-'
+                if len(inode_a_alterar.permissao_outros) < 2:
+                    inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros + '-'
+                return True
+            case _:
+                print("bash: chmod: " + '/'.join(caminho) +
+                        ": Usuário inválido")
+                return False
+
+    def remover_permissao(self, caminho: list, permissao: str, usuario_a_alterar: str, usuario_atual: str):
+        inode_a_alterar = self.encontrar_inode(caminho)
+        if inode_a_alterar is False:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if inode_a_alterar.apontador_inode_pai is None:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if len(permissao) > 2:
+            print("bash: chmod: " + '/'.join(caminho) +
+                  ": Permissão inválida")
+            return False
+        if usuario_atual != inode_a_alterar.dono:
+            print("bash: chmod: " + '/'.join(caminho) +
+                    ": Permissão negada")
+            return False
+        for i in permissao:
+            if i not in ['r', 'w']:
+                print("bash: chmod: " + '/'.join(caminho) +
+                      ": Permissão inválida")
+                return False
+        match usuario_a_alterar:
+            case 'u':
+                for i in permissao:
+                    if i not in inode_a_alterar.permissao_dono:
+                        print("bash: chmod: " + '/'.join(caminho) +
+                            ": Permissão já negada")
+                        return False
+                if len(permissao) == 1:
+                    inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace(permissao, '-')
+                elif len(permissao) == 2:
+                    inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace(permissao, '--')
+                return True
+            case 'o':
+                for i in permissao:
+                    if i not in inode_a_alterar.permissao_outros:
+                        print("bash: chmod: " + '/'.join(caminho) +
+                            ": Permissão já negada")
+                        return False
+                if len(permissao) == 1:
+                    inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace(permissao, '-')
+                elif len(permissao) == 2:
+                    inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace(permissao, '--')
+                return True
+            case 'a':
+                for i in permissao:
+                    if i not in inode_a_alterar.permissao_dono and i not in inode_a_alterar.permissao_outros:
+                        print("bash: chmod: " + '/'.join(caminho) +
+                            ": Permissão já negada")
+                        return False
+                    if i not in inode_a_alterar.permissao_dono:
+                        inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace(i, '-')
+                        return True
+                    if i not in inode_a_alterar.permissao_outros:
+                        inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace(i, '-')
+                        return True
+                if len(permissao) == 1:
+                    inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace(permissao, '-')
+                    inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace(permissao, '-')
+                elif len(permissao) == 2:
+                    inode_a_alterar.permissao_dono = inode_a_alterar.permissao_dono.replace(permissao, '--')
+                    inode_a_alterar.permissao_outros = inode_a_alterar.permissao_outros.replace(permissao, '--')
+                return True
+            case _:
+                print("bash: chmod: " + '/'.join(caminho) +
+                        ": Usuário inválido")
+                return False
+
+    def listar_permissoes_arquivo(self, caminho: list):
+        inode_a_listar = self.encontrar_inode(caminho)
+        if inode_a_listar is False:
+            print("bash: ls: " + '/'.join(caminho) +
+                  ": Arquivo ou diretório inexistente")
+            return False
+        if inode_a_listar.tipo == 'a':
+            print('-'+inode_a_listar.permissao_dono, inode_a_listar.permissao_outros, inode_a_listar.dono, '/'.join(caminho)) 
+            return True
+        elif inode_a_listar.tipo == 'd':
+            ## mostrar permissões dos arquivos dentro do diretório
+            filhos = inode_a_listar.listar()
+            for i in filhos:
+                if i.apontador_inode_pai is not inode_a_listar:
+                    continue
+                if i.tipo == 'a':
+                    print('-'+i.permissao_dono, i.permissao_outros, i.dono, '/'.join(caminho)+'/'+i.nome)
+                elif i.tipo == 'd':
+                    print('d'+i.permissao_dono, i.permissao_outros, i.dono, '/'.join(caminho)+'/'+i.nome)
+            return True
 
     def copiar_arquivo(self, caminho: list, novo_caminho: list): ## está duplicando o conteúdo do arquivo... pq?
         inode_a_copiar = self.encontrar_inode(caminho)

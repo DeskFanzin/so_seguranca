@@ -26,28 +26,81 @@ from classes.sistema_operacional import sistema_operacional
 # 4. bitmap de i-nodes ocupados
 # import datetime'''
 
+so = sistema_operacional()
+
+def criar_usuario():
+    print("criar usuário")
+    print("usuário: ", end="")
+    usuario = input()
+    print("senha: ", end="")
+    senha = input()
+    so.criar_usuario(usuario, senha)
+    
+def logar():
+    print("logar")
+    print("usuário: ", end="")
+    usuario = input()
+    print("senha: ", end="")
+    senha = input()
+    o =so.logar(usuario, senha)
+    if o == True:
+        print("logado")
+    else:
+        print("não logado")
+        criar_ou_logar()
+def criar_ou_logar():
+    print("1. criar usuário")
+    print("2. logar")
+    print("3. sair")
+    opcao = input()
+    if opcao == "1":
+        criar_usuario()
+        criar_ou_logar()
+    elif opcao == "2":
+        logar()
+    elif opcao == "3":
+        exit()
+    else:
+        print("opção inválida")
+        criar_ou_logar()
 
 def main():
-    so = sistema_operacional()
-    so.criar_usuario("admin", "admin")
-    so.logar("admin", "admin")
+    criar_ou_logar()
     while (comando := input(f"{Fore.GREEN}{so.usuario_atual}{Style.RESET_ALL}:{Fore.BLUE}~{so.arquivos.diretorio_atual}{Style.RESET_ALL}$ ")) != "sair" and so.usuario_atual is not None:
         comando = comando.split(" ")
         comando = list(filter(None, comando))
         match comando[0]:
             case "sair_usuario":
                 so.deslogar()
-                so.criar_usuario("admin2", "admin2")
-                so.logar("admin2", "admin2")
+                criar_ou_logar()
             case "chmod":
                 try:
                     if len(comando) == 1:
                         print("chmod: falta operando")
                         print("Tente 'chmod --help' para mais informações.")
-                    else:
-                        caminho_lista = so.converter_caminho_para_lista(comando[1])
-                        permissao = comando[2]
-                        so.arquivos.alterar_permissao(caminho_lista, permissao)
+                    if len(comando) > 1:
+                        if "=" in comando[1]:
+                            caminho_lista = so.converter_caminho_para_lista(comando[2])
+                            permissao = comando[1].split("=")[1]
+                            usuario_a_alterar = comando[1].split("=")[0]
+                            if usuario_a_alterar == '':
+                                usuario_a_alterar = 'a'
+                            so.arquivos.alterar_permissao(caminho_lista, permissao, usuario_a_alterar, so.usuario_atual)
+                        if "+" in comando[1]:
+                            caminho_lista = so.converter_caminho_para_lista(comando[2])
+                            permissao = comando[1].split("+")[1]
+                            usuario_a_alterar = comando[1].split("+")[0]
+                            if usuario_a_alterar == '':
+                                usuario_a_alterar = 'a'
+                            so.arquivos.adicionar_permissao(caminho_lista, permissao, usuario_a_alterar, so.usuario_atual)
+                        if "-" in comando[1]:
+                            caminho_lista = so.converter_caminho_para_lista(comando[2])
+                            permissao = comando[1].split("-")[1]
+                            usuario_a_alterar = comando[1].split("-")[0]
+                            if usuario_a_alterar == '':
+                                usuario_a_alterar = 'a'
+                            so.arquivos.remover_permissao(caminho_lista, permissao, usuario_a_alterar, so.usuario_atual)
+                        
                 except Exception as e:
                     print(e)
             case "chown":
@@ -57,8 +110,8 @@ def main():
                         print("Tente 'chown --help' para mais informações.")
                     else:
                         caminho_lista = so.converter_caminho_para_lista(comando[1])
-                        usuario = comando[2]
-                        so.arquivos.alterar_usuario(caminho_lista, usuario, so.usuario_atual)
+                        usuario_permitido = comando[2]
+                        so.arquivos.alterar_usuario(caminho_lista, usuario_permitido, so.usuario_atual)
                 except Exception as e:
                     print(e)
             case "salvar":
@@ -123,7 +176,7 @@ def main():
                     else:
                         for diretorio in comando[1:]:
                             caminho_lista = so.converter_caminho_para_lista(diretorio)
-                            so.arquivos.ler_arquivo(caminho_lista)
+                            so.arquivos.ler_arquivo(caminho_lista, so.usuario_atual)
                 except Exception as e:
                     print(e)
                     print("erro ao ler arquivo")
@@ -179,9 +232,21 @@ def main():
                 try:
                     if len(comando) == 1:
                         so.arquivos.listar_diretorio()
-                    for diretorio in comando[1:]:
-                        caminho_lista = so.converter_caminho_para_lista(diretorio)
-                        so.arquivos.listar_diretorio(caminho_lista)
+                        for diretorio in comando[1:]:
+                            caminho_lista = so.converter_caminho_para_lista(diretorio)
+                            so.arquivos.listar_diretorio(caminho_lista)
+                    if len(comando) > 1:
+                        if comando[1] == "-l":
+                                if comando[2].startswith("/"):
+                                    caminho_lista = so.converter_caminho_para_lista(comando[2])
+                                    so.arquivos.listar_permissoes_arquivo(caminho_lista)
+                                if comando[2] == '':
+                                    raise Exception
+                                if comando[2].startswith("/") == False:
+                                    caminho = so.converter_caminho_para_lista(comando[2])
+                                    so.arquivos.listar_permissoes_arquivo(caminho)
+
+
                 except Exception as e:
                     print(e)
                     print("erro ao listar diretório")
