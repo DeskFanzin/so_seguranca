@@ -36,5 +36,8 @@ As operações disponíveis são:
 
 .mv (nome do arquivo/diretório) (novo nome do arquivo/diretório) - Renomeia o arquivo ou diretório dado;
 
+.chmod (parametros) (nome do arquivo/diretório) - Altera as permissões do arquivo/diretório dado;
+
+.chown (nome do usuário) (nome do arquivo/diretório) - Altera o dono do arquivo/diretório dado;
 
 Além disto, todos os arquvios e diretórios criados ficam de maneira persistente no sistema.
